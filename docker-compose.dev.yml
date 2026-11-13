@@ -1,0 +1,11 @@
+services:
+  processor:
+    ports:
+      - "0.0.0.0:${SOCKET_PORT:-50051}:50051"
+  ingestion:
+    ports:
+      - "0.0.0.0:${DB_PUBLISHED_PORT:-8001}:8000"
+  dashboard:
+    ports:
+      - "0.0.0.0:${DASHBOARD_PORT:-8080}:8080"
+    networks: [backend, edge]

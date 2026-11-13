@@ -14,6 +14,7 @@ Operators: eq, ne, in, not_in, gt, gte, lt, lte, contains, startswith, regex.
 ``in`` / ``not_in`` expect ``constructor="list"`` (comma separated) for ``value``.
 Without ``group_by`` the alert identity is the matched field value.
 """
+
 from __future__ import annotations
 
 import re
@@ -24,15 +25,12 @@ from .base import BaseDetection, DetectionContext, Finding
 
 OPERATORS = ("eq", "ne", "in", "not_in", "gt", "gte", "lt", "lte", "contains", "startswith", "regex")
 
-
 @lru_cache(maxsize=256)
 def _regex(pattern: str) -> "re.Pattern":
     return re.compile(pattern)
 
-
 def _same(a: Any, b: Any) -> bool:
     return a == b or str(a) == str(b)
-
 
 def _compare(op: str, actual: Any, expected: Any) -> bool:
     if op == "eq":
@@ -51,7 +49,6 @@ def _compare(op: str, actual: Any, expected: Any) -> bool:
     if op == "startswith":
         return str(actual).startswith(str(expected))
     return _regex(str(expected)).search(str(actual)) is not None
-
 
 class FieldMatchDetection(BaseDetection):
     def __init__(self, field=None, *, op: str = "eq", value: Any = None, group_by: Any = None):

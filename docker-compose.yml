@@ -60,7 +60,6 @@ services:
     build: ./dashboard
     restart: unless-stopped
     <<: *hardening
-    ports: ["0.0.0.0:${DASHBOARD_PORT:-8080}:8080"]
     networks: [edge]
     depends_on:
       processor: { condition: service_healthy }

@@ -42,15 +42,13 @@ log = logging.getLogger(__name__)
 _ASN_HINTS = ("vpn", "proxy", "tor exit", "hosting", "datacenter", "data center",
               "digitalocean", "ovh", "hetzner", "linode", "vultr", "choopa")
 
-
-# --------------------------------------------------------------------------- backends
 _lock = threading.Lock()
 _geo = None
 _geo_loaded = False
 
-
 def _backend():
     global _geo, _geo_loaded
+
     if _geo_loaded:
         return _geo
     with _lock:
@@ -101,7 +99,6 @@ class _CidrSet:
 
 _vpn_sets: dict[str, Optional[_CidrSet]] = {}
 
-
 def _vpn_ranges() -> Optional[_CidrSet]:
     path = os.environ.get("PROCESSOR_VPN_RANGES", "")
     if not path:
@@ -120,7 +117,6 @@ def _vpn_ranges() -> Optional[_CidrSet]:
     return _vpn_sets[path]
 
 
-# --------------------------------------------------------------------------- lookup
 @lru_cache(maxsize=65_536)
 def _lookup(ip_text: str, check_vpn: bool) -> dict:
     result: dict = {"ip": ip_text, "valid": True, "is_private": False,
@@ -162,7 +158,6 @@ def _lookup(ip_text: str, check_vpn: bool) -> dict:
         result.update(is_vpn=is_vpn, vpn_reason=reason)
     return result
 
-
 class GeoIpEnrichment(BaseEnrichment):
     def __init__(self, *values, check_vpn: bool = False):
         super().__init__(*values)
@@ -171,7 +166,6 @@ class GeoIpEnrichment(BaseEnrichment):
     def run(self) -> Optional[dict]:
         if not self.values or self.values[0] in (None, ""):
             return None
-        return dict(_lookup(str(self.values[0]), self.check_vpn))  # copy: the cache is shared
-
+        return dict(_lookup(str(self.values[0]), self.check_vpn))
 
 export = GeoIpEnrichment

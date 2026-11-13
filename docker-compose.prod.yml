@@ -1,0 +1,19 @@
+networks:
+  proxy:
+    external: true
+    name: caddy_proxy
+
+services:
+  dashboard:
+    networks:
+      edge:
+      proxy:
+        aliases:
+          - analytics-dashboard
+  ingestion:
+    networks:
+      edge:
+      backend:
+      proxy:
+        aliases:
+          - analytics-ingestion

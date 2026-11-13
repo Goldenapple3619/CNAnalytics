@@ -29,7 +29,6 @@ _BOTS = re.compile(
     r"bot|crawl|spider|slurp|headless|phantomjs|selenium|puppeteer|playwright|lighthouse|"
     r"facebookexternalhit|preview|monitor|uptime", re.I)
 
-# (regex, name) - order matters: first match wins.
 _LIBRARIES = [
     (re.compile(r"curl/([\d.]+)", re.I), "curl"),
     (re.compile(r"wget/([\d.]+)", re.I), "wget"),
@@ -46,7 +45,6 @@ _LIBRARIES = [
     (re.compile(r"postmanruntime/([\d.]+)", re.I), "postman"),
 ]
 
-# (regex, name) - order matters: Edge/Opera/Samsung also say "Chrome", Chrome also says "Safari".
 _BROWSERS = [
     (re.compile(r"edgios?/([\d.]+)|edga?/([\d.]+)|edg/([\d.]+)", re.I), "Edge"),
     (re.compile(r"opr/([\d.]+)|opera/([\d.]+)|opios/([\d.]+)", re.I), "Opera"),
@@ -67,10 +65,8 @@ _OS = [
     (re.compile(r"(linux)", re.I), "Linux", {}),
 ]
 
-
 def _first_group(match: "re.Match") -> Optional[str]:
     return next((g for g in match.groups() if g), None)
-
 
 @lru_cache(maxsize=16_384)
 def _parse(ua: str) -> dict:
@@ -78,7 +74,7 @@ def _parse(ua: str) -> dict:
               "os_version": None, "device": "unknown", "is_bot": False, "is_automated": False,
               "empty": not ua.strip()}
     if result["empty"]:
-        result["is_automated"] = True  # real browsers always send a user agent
+        result["is_automated"] = True
         return result
 
     for pattern, name, aliases in _OS:
@@ -114,7 +110,6 @@ def _parse(ua: str) -> dict:
             result.update(kind="browser", browser=name, browser_version=(_first_group(match) or "").replace("_", ".") or None)
             return result
     return result
-
 
 class UaParseEnrichment(BaseEnrichment):
     def run(self) -> Optional[dict]:

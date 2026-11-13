@@ -1,22 +1,6 @@
-"""Base class of every enrichment.
-
-An enrichment is built once per event with the arguments declared in the XML ``<values>``
-(positional ``<key>``/``<const>`` first, then ``kwargs=`` ones), used as a context manager,
-and asked for its result::
-
-    with GeoIpEnrichment("1.2.3.4", check_vpn=True) as enrichment:
-        result = enrichment.run()      # JSON-serialisable dict
-
-The result is stored in ``event.enriched[<as>]``. Two rules with the same ``<as>`` are merged,
-so several rules can enrich the same dimension.
-
-Expensive resources (databases, caches, HTTP sessions) must live at module level, not in the
-instance: instances are short-lived. Use ``__exit__`` to release per-call resources.
-"""
 from __future__ import annotations
 
 from typing import Any
-
 
 class BaseEnrichment(object):
     def __init__(self, *values: Any, **options: Any):
