@@ -19,6 +19,18 @@ volumes:
   data:
 
 services:
+  init-data:
+    image: debian:bookworm-slim
+    user: "0:0"
+    command: >
+      sh -c "
+        mkdir -p /mnt/data/raw /mnt/data/processed &&
+        chown -R 10001:10001 /mnt/data
+      "
+    volumes:
+      - data:/mnt/data
+    restart: "no"
+
   processor:
     build: ./processor
     restart: unless-stopped
@@ -32,6 +44,9 @@ services:
     environment:
       INGEST_DB: "/mnt/data/raw/db.sqlite"
       PROCESSED_DB: "/mnt/data/processed/db.sqlite"
+    depends_on:
+      init-data:
+        condition: service_completed_successfully
     logging: *logging
 
   ingestion:
@@ -51,6 +66,9 @@ services:
     stop_grace_period: 15s
     volumes:
       - data:/mnt/data
+    depends_on:
+      init-data:
+        condition: service_completed_successfully
     environment:
       ANALYTICS_QUEUE_PATH: "/mnt/data/raw/queue.dat"
       ANALYTICS_DB_PATH: "/mnt/data/raw/db.sqlite"

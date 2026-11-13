@@ -9,9 +9,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 RUN useradd --system --no-create-home --uid "10001" processor
 
-RUN mkdir -p /mnt/data/processed \
-    && chown -R 10001:10001 /mnt/data
-
 USER processor
 
 EXPOSE 8000

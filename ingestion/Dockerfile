@@ -30,9 +30,6 @@ RUN adduser \
     --uid "10001" \
     ingestion
 
-RUN mkdir -p /mnt/data/raw \
-    && chown -R 10001:10001 /mnt/data
-
 USER ingestion
 
 COPY --from=build /bin/ingestion_server /bin/
