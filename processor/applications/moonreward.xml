@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  One file = one application. It is matched against the `application` column of the ingestion
+  table, then `source`, then `event_type`. Use name="*" on <event> to match any event of a source.
+
+  dimensions   Fields kept from the event. Looked up in payload_json, then attributes, then the
+               table columns (user_id, session_id ...). Dotted keys (device.os) walk nested JSON.
+               Optional constructor="int|float|bool|str|json" casts the stored value.
+
+  enrichment   Rules run in order, each one = one python class (pysymbol -> services/...).
+               The result is stored under <as>; rules sharing the same <as> are merged.
+               Later rules may read earlier results with <key>ip.country_code</key>.
+
+  alerts       Detection rules, same <values> syntax. A rule that returns a finding raises an alert;
+               repeats of the same rule+group within `cooldown` update the open alert instead of
+               creating a new one.
+                 attributes: name, severity (low|medium|high|critical), cooldown (30s, 5m, 1h ...),
+                             warmup (history replayed at start-up, default = what the rule needs),
+                             enabled="false" to switch a rule off.
+
+  <values>     Arguments of the python class, in order.
+                 <key   constructor="str" kwargs="x" optional="true">ip</key>
+                        value of that field of the event, cast with the constructor. Positional
+                        when kwargs is absent. When the field is missing the rule is skipped,
+                        unless optional="true" (the class then receives None).
+                 <const constructor="int" kwargs="x">50</const>   literal value.
+-->
+<application name="moonreward">
+    <source name="api">
+        <events>
+            <event name="connection_fail">
+                <dimensions>
+                    <key>ip</key>
+                    <key>user_agent</key>
+                    <key>attempted_account_id</key>
+                </dimensions>
+
+                <enrichment>
+                    <rule name="get geoip">
+                        <pysymbol>services.enrichment.geoip</pysymbol>
+
+                        <values>
+                            <key constructor="str">ip</key>
+                            <const constructor="bool" kwargs="check_vpn">1</const>
+                        </values>
+
+                        <as>ip</as>
+                    </rule>
+                    <rule name="parse ua infos">
+                        <pysymbol>services.enrichment.ua_parse</pysymbol>
+
+                        <values>
+                            <key constructor="str">user_agent</key>
+                        </values>
+
+                        <as>user_agent</as>
+                    </rule>
+                </enrichment>
+
+                <alerts>
+                    <rule name="bruteforce" severity="high" cooldown="5m">
+                        <pysymbol>services.detection.rate_above</pysymbol>
+
+                        <values>
+                            <key constructor="str" kwargs="group_by">ip</key>
+                            <const constructor="str" kwargs="window">5m</const>
+                            <const constructor="int" kwargs="threshold">50</const>
+                        </values>
+                    </rule>
+
+                    <rule name="credential stuffing" severity="critical" cooldown="10m">
+                        <pysymbol>services.detection.distinct_above</pysymbol>
+
+                        <values>
+                            <key constructor="str" kwargs="group_by">ip</key>
+                            <key constructor="str" kwargs="distinct">attempted_account_id</key>
+                            <const constructor="str" kwargs="window">10m</const>
+                            <const constructor="int" kwargs="threshold">20</const>
+                        </values>
+                    </rule>
+
+                    <rule name="vpn source" severity="low" cooldown="1h">
+                        <pysymbol>services.detection.field_match</pysymbol>
+
+                        <values>
+                            <key   constructor="bool" kwargs="field">ip.is_vpn</key>
+                            <const constructor="str"  kwargs="op">eq</const>
+                            <const constructor="bool" kwargs="value">1</const>
+                            <key   constructor="str"  kwargs="group_by">ip</key>
+                        </values>
+                    </rule>
+
+                    <rule name="automated client" severity="medium" cooldown="30m">
+                        <pysymbol>services.detection.field_match</pysymbol>
+
+                        <values>
+                            <key   constructor="bool" kwargs="field">user_agent.is_automated</key>
+                            <const constructor="str"  kwargs="op">eq</const>
+                            <const constructor="bool" kwargs="value">1</const>
+                            <key   constructor="str"  kwargs="group_by">ip</key>
+                        </values>
+                    </rule>
+                </alerts>
+            </event>
+
+            <!-- second event, to show typed dimensions, columns used as keys and a per-user rate -->
+            <event name="reward_claim">
+                <dimensions>
+                    <key>reward_id</key>
+                    <key constructor="int">amount</key>
+                    <key>ip</key>
+                </dimensions>
+
+                <enrichment>
+                    <rule name="get geoip">
+                        <pysymbol>services.enrichment.geoip</pysymbol>
+                        <values>
+                            <key constructor="str">ip</key>
+                        </values>
+                        <as>ip</as>
+                    </rule>
+                </enrichment>
+
+                <alerts>
+                    <rule name="claim farming" severity="medium" cooldown="15m">
+                        <pysymbol>services.detection.rate_above</pysymbol>
+                        <values>
+                            <key constructor="str" kwargs="group_by">user_id</key>
+                            <const constructor="str" kwargs="window">1m</const>
+                            <const constructor="int" kwargs="threshold">20</const>
+                        </values>
+                    </rule>
+                </alerts>
+            </event>
+        </events>
+    </source>
+</application>

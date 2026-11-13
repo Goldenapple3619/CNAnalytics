@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://analytics.cnstudio.dev/sitemap.xml

@@ -1,0 +1,71 @@
+syntax = "proto3";
+
+package analytics;
+
+import "google/protobuf/timestamp.proto";
+
+service IngestionService {
+    rpc IngestStream (stream AnalyticsEvent)
+        returns (IngestionResponse);
+
+    rpc IngestBatches (stream AnalyticsBatch)
+        returns (IngestionResponse);
+
+    rpc GetStatus (StatusRequest)
+        returns (StatusResponse);
+}
+
+message AnalyticsEvent {
+    string event_id = 1;
+    string event_type = 2;
+
+    google.protobuf.Timestamp timestamp = 3;
+
+    string user_id = 4;
+    string payload_json = 5;
+    string session_id = 6;
+
+    string source = 7;
+    string application = 8;
+    string environment = 9;
+    uint32 schema_version = 10;
+
+    map<string, string> attributes = 11;
+}
+
+message AnalyticsBatch {
+    string batch_id = 1;
+    repeated AnalyticsEvent events = 2;
+    uint64 sequence_number = 3;
+}
+
+message IngestionResponse {
+    bool success = 1;
+    uint64 count_received = 2;
+    uint64 count_processed = 3;
+    uint64 count_failed = 4;
+    uint64 count_duplicates = 5;
+    repeated EventError errors = 6;
+    string message = 7;
+    google.protobuf.Timestamp server_timestamp = 8;
+}
+
+message EventError {
+    string event_id = 1;
+    string error_code = 2;
+    string error_message = 3;
+}
+
+message StatusRequest {
+}
+
+message StatusResponse {
+    bool healthy = 1;
+    string service_name = 2;
+    string version = 3;
+    uint64 total_received = 4;
+    uint64 total_processed = 5;
+    uint64 total_failed = 6;
+    uint64 queue_size = 7;
+    google.protobuf.Timestamp server_timestamp = 8;
+}

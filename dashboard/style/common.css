@@ -1,0 +1,152 @@
+@font-face {
+    font-family: 'Inter';
+    src: url('/assets/fonts/inter-var-latin.woff2') format('woff2');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Pixelify Sans';
+    src: url('/assets/fonts/pixelify-sans-400.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Pixelify Sans';
+    src: url('/assets/fonts/pixelify-sans-700.woff2') format('woff2');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+:root {
+    color-scheme: dark;
+
+    /* Surfaces, darkest to lightest */
+    --bg-sunken: #2d0212;
+    --bg-main: #40051b;
+    --surface: #4c0c28;
+    --surface-2: #5a1636;
+    --surface-3: #6a2044;
+
+    --line: rgba(255, 214, 232, .11);
+    --line-strong: rgba(255, 214, 232, .24);
+
+    /* Text */
+    --ink: #fdeef4;
+    --ink-2: #e0bccd;
+    --ink-3: #b88ea3;
+    --accent: #fc82b8;
+    --accent-ink: #2d0212;
+
+    --danger: #b32665;
+    --ok: #2c7d5f;
+    --selection: rgba(252, 130, 184, .28);
+
+    /* Status. Always paired with an icon and a label, never colour alone. */
+    --st-ok: #6fdcae;
+    --st-warn: #fab219;
+    --st-serious: #ec835a;
+    --st-crit: #ff7a90;
+
+    /* Chart series, in fixed order. Validated against --surface. */
+    --s1: #3987e5;
+    --s2: #d95926;
+    --s3: #199e70;
+    --s4: #c98500;
+    --s5: #d55181;
+    --s6: #008300;
+    --s7: #9085e9;
+    --s8: #e66767;
+
+    --font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --font-pixel: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: ui-monospace, 'Cascadia Code', 'JetBrains Mono', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
+
+    --radius-sm: 8px;
+    --radius: 14px;
+    --radius-lg: 20px;
+    --elev-1: 0 1px 2px rgba(20, 0, 8, .35), 0 4px 10px -2px rgba(20, 0, 8, .25);
+    --elev-2: 0 10px 30px -6px rgba(20, 0, 8, .55);
+
+    --focus-ring: 0 0 0 2px var(--bg-main), 0 0 0 4px var(--accent);
+
+    --color-main: var(--ink);
+    --color-invert: #fff;
+}
+
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+}
+
+body {
+    font-family: var(--font-ui);
+    font-size: 14px;
+    line-height: 1.4;
+    color: var(--ink);
+    background: var(--bg-main);
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+
+::selection {
+    background: var(--selection);
+}
+
+#app {
+    width: 100%; height: 100%;
+}
+
+h1, h2, h3, h4, h5, p {
+    margin: 0;
+}
+
+a {
+    color: inherit;
+}
+
+button, input, select, textarea {
+    font: inherit;
+    color: inherit;
+}
+
+button {
+    cursor: pointer;
+}
+
+:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+}
+
+[hidden] {
+    display: none !important;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px; height: 1px;
+    margin: -1px; padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: .01ms !important;
+        transition-duration: .01ms !important;
+    }
+}

@@ -1,0 +1,67 @@
+name: analytics
+
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "10m", max-file: "3" }
+
+x-hardening: &hardening
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: [ALL]
+
+networks:
+  edge:
+  backend:
+    internal: true
+  analytics:
+    name: analytics
+
+volumes:
+  data:
+
+services:
+  processor:
+    build: ./processor
+    restart: unless-stopped
+    <<: *hardening
+    read_only: true
+    tmpfs: [/tmp]
+    networks: [edge, backend]
+    stop_grace_period: 15s
+    volumes:
+      - data:/mnt/data
+    environment:
+      INGEST_DB: "/mnt/data/raw/db.sqlite"
+      PROCESSED_DB: "/mnt/data/processed/db.sqlite"
+    logging: *logging
+
+  ingestion:
+    build:
+      context: ./ingestion
+      additional_contexts:
+        proto: ./proto
+    restart: unless-stopped
+    <<: *hardening
+    read_only: true
+    tmpfs: [/tmp]
+    networks:
+      backend:
+      analytics:
+        aliases:
+          - analytics
+    stop_grace_period: 15s
+    volumes:
+      - data:/mnt/data
+    environment:
+      ANALYTICS_QUEUE_PATH: "/mnt/data/raw/queue.dat"
+      ANALYTICS_DB_PATH: "/mnt/data/raw/db.sqlite"
+    logging: *logging
+
+  dashboard:
+    build: ./dashboard
+    restart: unless-stopped
+    <<: *hardening
+    ports: ["0.0.0.0:${DASHBOARD_PORT:-8080}:8080"]
+    networks: [edge]
+    depends_on:
+      processor: { condition: service_healthy }
+    logging: *logging

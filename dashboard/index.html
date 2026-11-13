@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Dashboard</title>
+
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+        <link rel="icon" href="data:,">
+        <link rel="preload" href="/assets/fonts/inter-var-latin.woff2" as="font" type="font/woff2" crossorigin>
+        <link rel="preload" href="/assets/fonts/pixelify-sans-700.woff2" as="font" type="font/woff2" crossorigin>
+        <link rel="stylesheet" href="/style/common.css">
+        <link rel="stylesheet" href="/style/layout.css">
+        <link rel="stylesheet" href="/style/components.css">
+    </head>
+    <body>
+        <div id="app">
+            <header class="topbar">
+                <div class="brand">
+                    <svg class="brand-mark" width="28" height="28" viewBox="0 0 28 28" aria-hidden="true">
+                        <rect x="2" y="14" width="6" height="12" rx="1.5" fill="#2c7d5f"/>
+                        <rect x="11" y="6" width="6" height="20" rx="1.5" fill="#fc82b8"/>
+                        <rect x="20" y="17" width="6" height="9" rx="1.5" fill="#fab219"/>
+                    </svg>
+                    <h1>Dashboard</h1>
+                </div>
+                <div class="topbar-actions" id="topbar-actions"></div>
+            </header>
+
+            <div class="shell">
+                <nav class="sidebar" id="sidebar" aria-label="Applications"></nav>
+                <main id="content" class="content"></main>
+            </div>
+        </div>
+
+        <div id="tooltip" class="tooltip" role="tooltip" hidden></div>
+        <div id="toasts" class="toasts" role="status" aria-live="polite"></div>
+
+        <script type="module" src="/script/main.js"></script>
+    </body>
+</html>

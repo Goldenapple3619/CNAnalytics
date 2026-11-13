@@ -1,0 +1,7 @@
+fastapi>=0.110
+uvicorn[standard]>=0.29
+geoip2fast>=1.2          # offline country-level GeoIP (optional: geo fields are null without it)
+
+# tests only
+pytest>=8
+httpx>=0.27
