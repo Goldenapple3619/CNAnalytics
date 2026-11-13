@@ -46,6 +46,12 @@ class BaseDetection(object):
         self.values: tuple = values
         self.options: dict = options
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exception_type, exception_value, exception_traceback):
+        return False
+
     @classmethod
     def validate(cls, **options: Any) -> None:
         """Called when the XML is loaded with the rule's constant keyword values (already cast).
