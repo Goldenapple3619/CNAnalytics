@@ -22,6 +22,7 @@ class Settings:
     batch_size: int = 500
     reload_check_interval: float = 5
     sweep_interval: float = 30
+    tick_interval: float = 5
     time_field: str = "timestamp_ms"
     retention_days: int = 30
     prune_interval: float = 3600
@@ -50,6 +51,7 @@ class Settings:
             batch_size=int(_env("BATCH_SIZE", str(d.batch_size))),
             reload_check_interval=float(_env("RELOAD_CHECK_INTERVAL", str(d.reload_check_interval))),
             sweep_interval=float(_env("SWEEP_INTERVAL", str(d.sweep_interval))),
+            tick_interval=float(_env("TICK_INTERVAL", str(d.tick_interval))),
             time_field=time_field,
             retention_days=int(_env("RETENTION_DAYS", str(d.retention_days))),
             prune_interval=float(_env("PRUNE_INTERVAL", str(d.prune_interval))),

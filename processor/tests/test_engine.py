@@ -202,3 +202,87 @@ def test_worker_thread_processes_live_rows(env, make_processor):
     assert p.metrics["processed"] == 1
     p.stop()
     assert p.running is False
+
+
+# --- time-driven rules (absence): the engine ticks them, they do not fire from events ----------------------
+
+HEARTBEAT_XML = """<application name="shop">
+  <source name="api"><events>
+    <event name="heartbeat">
+      <dimensions><key>instance_id</key></dimensions>
+      <alerts>
+        <rule name="heartbeat lost" severity="critical" cooldown="5m"><pysymbol>services.detection.absence</pysymbol>
+          <values><key kwargs="group_by">instance_id</key><const kwargs="window">2m</const></values></rule>
+      </alerts>
+    </event>
+  </events></source>
+</application>
+"""
+
+
+def beat(env, ts, instance, **kw):
+    write_row(env.ingest_db, "heartbeat", ts, payload={"instance_id": instance}, **kw)
+
+
+def lost(env):
+    return [a for a in alerts(env) if a["rule_name"] == "heartbeat lost"]
+
+
+def test_absence_fires_from_tick_repeats_per_window_and_recovers(env, make_processor):
+    (env.applications_dir / "shop.xml").write_text(HEARTBEAT_XML)
+    beat(env, T0, "a")
+    beat(env, T0, "b", event_id="b-last")
+    for i in (1, 2, 3):
+        beat(env, T0 + i * 60 * SEC, "a")                 # a keeps reporting, b goes silent after T0
+    p = make_processor()
+    p.drain()
+    assert lost(env) == []                                # events alone never fire an absence rule
+
+    assert p.tick(T0 + 10 * SEC) == 0                     # first tick only arms (grace period = window)
+    assert p.tick(T0 + 100 * SEC) == 0                    # still inside the grace period
+    assert p.tick(T0 + 190 * SEC) == 1                    # b: silent 190s > 2m
+    (b,) = lost(env)
+    assert b["group_key"] == "instance_id" and b["group_value"] == "b" and b["severity"] == "critical"
+    assert b["first_event_id"] == "b-last" and b["status"] == "open"
+    assert "instance_id=b" in b["message"] and json.loads(b["details_json"])["silent_for_ms"] == 190 * SEC
+    assert (b["application"], b["source"], b["event_type"]) == ("shop", "api", "heartbeat")
+    assert p.metrics["alerts_created"] == 1
+
+    assert p.tick(T0 + 200 * SEC) == 0                    # same silence, inside the repeat window: nothing
+    assert p.tick(T0 + 320 * SEC) == 1                    # a is now silent too; b repeats, merged into its alert
+    by_group = {a["group_value"]: a for a in lost(env)}
+    assert set(by_group) == {"a", "b"} and by_group["b"]["occurrences"] == 2
+
+    beat(env, T0 + 330 * SEC, "b")                        # b is back: its alert stops being renewed
+    p.drain()
+    assert p.tick(T0 + 400 * SEC) == 0
+    assert {a["group_value"]: a["occurrences"] for a in lost(env)} == {"a": 1, "b": 2}
+
+
+def test_tick_keeps_working_after_reload(env, make_processor):
+    (env.applications_dir / "shop.xml").write_text(HEARTBEAT_XML)
+    beat(env, T0, "a")
+    p = make_processor()
+    p.drain()
+    p.tick(T0 + 10 * SEC)                                 # arm
+    xml = env.applications_dir / "shop.xml"
+    xml.write_text(xml.read_text().replace('cooldown="5m"', 'cooldown="10m"'))   # new digest: rule rebuilt
+    assert p.reload()["rebuilt"] == 1
+    p.tick(T0 + 10 * SEC)                                 # re-armed after the rebuild
+    assert p.tick(T0 + 200 * SEC) == 1                    # rebuilt state was replayed: a is known and silent
+    assert lost(env)[0]["group_value"] == "a"
+
+
+def test_worker_thread_ticks_absence_rule(env, make_processor):
+    import time
+    from src.store import now_ms
+    (env.applications_dir / "shop.xml").write_text(HEARTBEAT_XML.replace(">2m</const>", ">1s</const>"))
+    beat(env, now_ms() - 5_000, "a")                      # one heartbeat, then nothing
+    p = make_processor(env.with_overrides(tick_interval=0.1))
+    p.start()
+    deadline = time.time() + 8
+    while time.time() < deadline and not lost(env):
+        time.sleep(0.1)
+    p.stop()
+    (a,) = lost(env)
+    assert a["group_value"] == "a" and p.metrics["alerts_created"] == 1

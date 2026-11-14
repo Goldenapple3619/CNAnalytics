@@ -74,7 +74,7 @@ class FieldMatchDetection(BaseDetection):
             if not _compare(self.op, self.field, self.value):
                 return None
         except (TypeError, ValueError):
-            return None  # e.g. numeric comparison on a non-numeric value: simply no match
+            return None
         field_name = ctx.keys.get("field")
         group_key = ctx.keys.get("group_by") if self.group_by is not None else field_name
         group_value = self.group_by if self.group_by is not None else self.field

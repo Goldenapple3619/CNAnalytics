@@ -94,7 +94,7 @@ class Processor(object):
 
     def _run(self) -> None:
         s = self.settings
-        last_reload = last_sweep = last_prune = time.monotonic()
+        last_reload = last_sweep = last_prune = last_tick = time.monotonic()
         log.info("processor started: %s -> %s", s.ingest_db, s.processor_db)
         try:
             while not self._stop.is_set():
@@ -123,6 +123,16 @@ class Processor(object):
                     last_sweep = now
                     with self._lock:
                         self.engine.sweep()
+                if s.tick_interval and now - last_tick >= s.tick_interval:
+                    last_tick = now
+
+                    if self.metrics["source_available"] and self.metrics.get("lag") == 0:
+                        try:
+                            self.tick()
+                        except Exception as exc:
+                            log.exception("time-driven rules failed")
+                            self.metrics["errors"] += 1
+                            self.metrics["last_error"] = f"tick: {type(exc).__name__}: {exc}"
                 if s.retention_days and now - last_prune >= s.prune_interval:
                     last_prune = now
                     self._prune()
@@ -131,6 +141,17 @@ class Processor(object):
         finally:
             self.running = False
             log.info("processor stopped")
+
+    def tick(self, now_ms: Optional[int] = None) -> int:
+        """Run the time-driven rules (absence of events) against the wall clock, store and announce the
+        alerts they raise. Returns the number of newly created alerts. Not called by :meth:`drain`:
+        replaying a backlog says nothing about what is silent *now*."""
+        self.open()
+        with self._lock:
+            created = self.engine.tick(now_ms)
+            self.metrics["alerts_created"] += len(created)
+        self._notifier.notify(created)
+        return len(created)
 
     def _tick(self) -> int:
         """Process one batch. Returns the number of rows handled (0 = caught up)."""

@@ -14,6 +14,11 @@ that replay needs, ``sweep`` lets the rule drop stale state.
 
 A returned :class:`Finding` becomes an alert. Findings of the same rule and group are merged into
 one open alert while they keep arriving within the rule's ``cooldown``.
+
+Rules about something that did NOT happen (absence of events) cannot fire from ``evaluate``, since
+it only runs when an event arrives. They implement the ``tick`` classmethod instead: the engine
+calls it on a timer for every rule, with the wall clock, and turns the returned findings into
+alerts exactly like those of ``evaluate``.
 """
 from __future__ import annotations
 
@@ -29,6 +34,7 @@ class Finding:
     details: dict = field(default_factory=dict)
     title: Optional[str] = None         # defaults to the rule name
     severity: Optional[str] = None      # defaults to the rule's severity attribute
+    event_id: Optional[str] = None      # event the alert points at; set by ``tick`` findings (no current event)
 
 
 @dataclass
@@ -65,6 +71,13 @@ class BaseDetection(object):
     @classmethod
     def sweep(cls, state: dict, now_ms: int, **options: Any) -> None:
         """Called periodically: drop state that can no longer influence a result."""
+
+    @classmethod
+    def tick(cls, state: dict, now_ms: int, **options: Any) -> list[Finding]:
+        """Called on a timer (wall clock ``now_ms``), independently of any event. Return the findings
+        that became true with the passing of time; they are turned into alerts like those of
+        ``evaluate``. May mutate ``state`` (e.g. to remember what was already reported)."""
+        return []
 
     def evaluate(self, ctx: DetectionContext) -> Optional[Finding]:
         raise NotImplementedError(f"{type(self).__name__}.evaluate() is not implemented")

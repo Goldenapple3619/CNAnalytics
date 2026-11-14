@@ -132,3 +132,47 @@ def test_cidr_set_merges_and_bisects():
     assert ipaddress.ip_address("10.0.2.1") not in s
     assert ipaddress.ip_address("192.168.5.5") in s
     assert ipaddress.ip_address("::1") not in s
+
+
+def test_absence_tick_arms_alerts_once_per_window_and_recovers():
+    from services.detection.absence import AbsenceDetection
+
+    state = {}
+    opts = {"window": "10s"}
+
+    def seen(ts, group="a"):
+        with AbsenceDetection(group, **opts) as d:
+            assert d.evaluate(ctx(state, ts, group_by="instance_id")) is None   # never fires from an event
+
+    seen(0)
+    assert AbsenceDetection.tick(state, 5 * SEC, **opts) == []       # arms: nothing before start + window
+    assert AbsenceDetection.tick(state, 14 * SEC, **opts) == []      # still inside the grace period
+    (finding,) = AbsenceDetection.tick(state, 20 * SEC, **opts)
+    assert finding.group_key == "instance_id" and finding.group_value == "a"
+    assert finding.details["silent_for_ms"] == 20 * SEC
+    assert AbsenceDetection.tick(state, 25 * SEC, **opts) == []      # already reported inside this window
+    assert len(AbsenceDetection.tick(state, 31 * SEC, **opts)) == 1  # silence goes on: repeated once per window
+    seen(40 * SEC)
+    assert AbsenceDetection.tick(state, 45 * SEC, **opts) == []      # reported again: alert stops
+
+
+def test_absence_without_group_by_is_one_global_stream():
+    from services.detection.absence import AbsenceDetection
+
+    state = {}
+    with AbsenceDetection(window="10s") as d:
+        d.evaluate(ctx(state, 0))                                    # no "group_by" key configured
+    AbsenceDetection.tick(state, 1 * SEC, window="10s")
+    (finding,) = AbsenceDetection.tick(state, 30 * SEC, window="10s")
+    assert finding.group_key is None and finding.group_value is None and "event stream" in finding.message
+
+
+def test_absence_sweep_forgets_retired_groups():
+    from services.detection.absence import AbsenceDetection
+
+    state = {}
+    for group, ts in (("old", 0), ("new", 3_600_000)):
+        with AbsenceDetection(group, window="1m") as d:
+            d.evaluate(ctx(state, ts, group_by="instance_id"))
+    AbsenceDetection.sweep(state, 3_700_000, window="1m")            # default forget = max(1h, 10 x window)
+    assert list(state["groups"]) == ["new"]

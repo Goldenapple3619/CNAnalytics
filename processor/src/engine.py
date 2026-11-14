@@ -11,6 +11,7 @@ from .config import Settings
 from .event import Event, RawEvent, extract, loads_object
 from .spec import SEVERITIES, EventSpec, Registry, RuleSpec, ValueSpec
 from .store import AlertCandidate, Store
+from .store import now_ms as wall_clock_ms
 from .symbols import resolve
 
 log = logging.getLogger(__name__)
@@ -27,6 +28,8 @@ class RuleRuntime:
     const: dict
     state: dict = field(default_factory=dict)
     last_ts: int = 0
+    spec: Optional[EventSpec] = None
+    rule: Optional[RuleSpec] = None
 
 
 def build_args(values: tuple[ValueSpec, ...], event: Event) -> Optional[tuple[list, dict, dict]]:
@@ -73,9 +76,11 @@ class Engine:
                 rid = rule_id(spec, rule)
                 previous = self._runtimes.get(rid)
                 if previous is not None and previous.digest == rule.digest():
+                    previous.spec, previous.rule = spec, rule
                     runtimes[rid] = previous
                     continue
-                runtime = RuleRuntime(rid, rule.digest(), resolve(rule.symbol), rule.const_kwargs())
+                runtime = RuleRuntime(rid, rule.digest(), resolve(rule.symbol), rule.const_kwargs(),
+                                      spec=spec, rule=rule)
                 runtimes[rid] = runtime
                 to_warm.append((spec, rule, runtime))
         self._runtimes = runtimes
@@ -113,6 +118,23 @@ class Engine:
                 runtime.cls.sweep(runtime.state, runtime.last_ts, **runtime.const)
             except Exception:
                 log.exception("sweep of rule %s failed", runtime.rule_id)
+
+    def tick(self, now_ms: Optional[int] = None) -> list[dict]:
+        """Run the time-driven part of every rule (``cls.tick``), e.g. absence of events, and store the
+        resulting alerts. ``now_ms`` is the wall clock. Returns the *newly created* alerts."""
+        now = wall_clock_ms() if now_ms is None else now_ms
+        candidates: list[AlertCandidate] = []
+        for runtime in self._runtimes.values():
+            try:
+                findings = runtime.cls.tick(runtime.state, now, **runtime.const)
+            except Exception:
+                log.exception("tick of rule %s failed", runtime.rule_id)
+                continue
+            for finding in findings:
+                spec = runtime.spec
+                candidates.append(self._build_candidate(
+                    spec, runtime.rule, runtime, finding, spec.source, spec.name, finding.event_id or "", now))
+        return self.store.write_alerts(candidates) if candidates else []
 
     def process(self, raw: RawEvent) -> tuple[Optional[Event], list[AlertCandidate]]:
         """Returns ``(None, [])`` when no application definition matches the event."""
@@ -197,12 +219,17 @@ class Engine:
 
     def _candidate(self, spec: EventSpec, rule: RuleSpec, runtime: RuleRuntime,
                    finding: Finding, event: Event) -> AlertCandidate:
+        return self._build_candidate(spec, rule, runtime, finding, event.source, event.event_type,
+                                     event.event_id, event.ts(self.settings.time_field))
+
+    @staticmethod
+    def _build_candidate(spec: EventSpec, rule: RuleSpec, runtime: RuleRuntime, finding: Finding,
+                         source: str, event_type: str, event_id: str, ts_ms: int) -> AlertCandidate:
         severity = finding.severity if finding.severity in SEVERITIES else rule.severity
         return AlertCandidate(
             rule_id=runtime.rule_id, rule_name=rule.name, symbol=rule.symbol,
-            application=spec.application, source=event.source, event_type=event.event_type,
+            application=spec.application, source=source, event_type=event_type,
             severity=severity, title=finding.title or rule.name, message=finding.message,
             group_key=finding.group_key,
             group_value=None if finding.group_value is None else str(finding.group_value),
-            details=finding.details, event_id=event.event_id,
-            ts_ms=event.ts(self.settings.time_field), cooldown_ms=rule.cooldown_ms)
+            details=finding.details, event_id=event_id, ts_ms=ts_ms, cooldown_ms=rule.cooldown_ms)

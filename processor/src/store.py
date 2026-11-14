@@ -217,6 +217,17 @@ class Store:
             self._set_cursor(c, cursor)
         return created
 
+    def write_alerts(self, candidates: list[AlertCandidate]) -> list[dict]:
+        """Store alerts that are not tied to an incoming event (time-driven rules). Returns the *newly created* ones."""
+        created: list[dict] = []
+        stamp = now_ms()
+        with self._tx() as c:
+            for cand in candidates:
+                alert, is_new = self._upsert_alert(c, cand, stamp)
+                if is_new:
+                    created.append(alert)
+        return created
+
     @staticmethod
     def _next_rev(c: sqlite3.Connection) -> int:
         return c.execute("SELECT COALESCE(MAX(rev), 0) + 1 FROM alerts").fetchone()[0]
