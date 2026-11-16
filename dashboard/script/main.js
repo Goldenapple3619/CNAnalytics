@@ -244,6 +244,11 @@ async function refresh() {
         lastData = null;
         body.replaceChildren(errorState(err, () => refresh()));
         renderedView = state.view;
+
+        if (err?.status === 401) {
+            localStorage.removeItem("dashboard.apiKey");
+            location.reload();
+        }
     } finally {
         if (token === renderToken) {
             loading = false;
@@ -274,12 +279,20 @@ async function route() {
 
 /* ----------------------------------------------------------------------- boot */
 
-window.addEventListener('hashchange', route);
-hideTipOnScroll(content);
+if (!localStorage.getItem("dashboard.apiKey")) {
+    document.getElementById("login").hidden = false;
+    document.getElementById("submitApiKey").addEventListener("click", () => {
+        localStorage.setItem('dashboard.apiKey', document.getElementById('apiKey').value);
+        location.reload();
+    });
+} else {
+    window.addEventListener('hashchange', route);
+    hideTipOnScroll(content);
 
-setInterval(paintUpdated, 1000);
-setInterval(() => {
-    if (state.live && !document.hidden && !loading) refresh();
-}, config.refreshSeconds * 1000);
+    setInterval(paintUpdated, 1000);
+    setInterval(() => {
+        if (state.live && !document.hidden && !loading) refresh();
+    }, config.refreshSeconds * 1000);
 
-loadApps().then(route);
+    loadApps().then(route);
+}

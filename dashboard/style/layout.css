@@ -5,6 +5,25 @@
     grid-template-rows: 64px minmax(0, 1fr);
 }
 
+#apiKey {
+    width: 100% !important;
+}
+
+#submitApiKey {
+    align-self: flex-end;
+    width: 120px;
+    text-align: center !important;
+    display: block !important;
+}
+
+#loginModalContent {
+    display: flex !important;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
 .topbar {
     display: flex;
     align-items: center;

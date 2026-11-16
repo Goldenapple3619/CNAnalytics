@@ -31,6 +31,19 @@
                 <nav class="sidebar" id="sidebar" aria-label="Applications"></nav>
                 <main id="content" class="content"></main>
             </div>
+
+            <div id="login" class="login modal" hidden>
+                <div class="modal-body">
+                    <div class="modal-head">
+                        <h2>Login</h2>
+                    </div>
+                    <div class="modal-content" id="loginModalContent">
+                        <label class="label" for="apiKey">enter your API Key</label>
+                        <input id="apiKey" class="input" type="text"/>
+                        <button id="submitApiKey" class="btn btn-primary">Enter</button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div id="tooltip" class="tooltip" role="tooltip" hidden></div>

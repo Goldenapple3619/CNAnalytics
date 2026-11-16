@@ -152,7 +152,7 @@ export function selectControl({ label, options, value, onChange }) {
 
 export function searchInput({ placeholder, value = '', onInput }) {
     return h('input', {
-        class: 'input', type: 'search', placeholder, value, 'aria-label': placeholder, autocomplete: 'off',
+        class: 'input input-search', type: 'search', placeholder, value, 'aria-label': placeholder, autocomplete: 'off',
         oninput: (e) => onInput(e.target.value),
     });
 }

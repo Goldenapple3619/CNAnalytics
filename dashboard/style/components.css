@@ -204,10 +204,19 @@
 
 .input {
     width: 220px;
-    padding: 0 12px 0 34px;
+    padding: 0 12px 0 12px;
+}
+
+.label {
+    font-family: var(--font-ui);
+    font-size: 16px;
+}
+
+.input-search {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none' stroke='%23b88ea3' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='7' cy='7' r='4.5'/%3E%3Cpath d='M10.5 10.5L14 14'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: 10px center;
+    padding: 0 12px 0 34px;
 }
 
 .input::placeholder {
@@ -217,6 +226,70 @@
 .select:hover, .input:hover {
     border-color: var(--ink-3);
 }
+
+/* ---------- Modal --------- */
+
+.modal {
+    width: 100vw;
+    height: 100vh;
+
+    left: 0px;
+    right: 0;
+
+    position: fixed;
+    background-color: #230110ae;
+
+    z-index: 60;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    transition: background-color 1s;
+}
+
+.modal-body {
+    min-width: 600px;
+    min-height: 200px;
+
+    display: flex;
+    flex-direction: column;
+
+    border-radius: var(--radius);
+
+    background-color: var(--surface-2);
+}
+
+.modal-head {
+    width: 100%;
+    height: 40px;
+
+    border-radius: var(--radius);
+    border-bottom-left-radius: 0px;
+    border-bottom-right-radius: 0px;
+
+    padding-left: 10px;
+    padding-right: 10px;
+
+    display: flex;
+    align-items: center;
+    justify-content: start;
+    flex-direction: row;
+
+    background-color: var(--surface);
+}
+
+.modal-head h2 {
+    color: var(--ink-2);
+    font-family: var(--font-ui);
+}
+
+.modal-content {
+    flex-grow: 1;
+    padding: 20px;
+}
+
 
 /* ---------- Tabs ---------- */
 
@@ -1016,4 +1089,13 @@ th[aria-sort] .sort-btn svg { opacity: 1; }
     .alert { grid-template-columns: minmax(0, 1fr); }
     .alert-side { flex-direction: row; align-items: center; text-align: left; }
     .input { width: 100%; }
+    .modal-body {
+        min-width: 400px;
+    }
+}
+
+@media (max-width: 400px) {
+    .modal-body {
+        min-width: 100%;
+    }
 }

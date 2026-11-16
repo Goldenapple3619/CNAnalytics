@@ -31,6 +31,8 @@ def main() -> int:
         overrides["log_level"] = overrides["log_level"].upper()
     settings: Settings = Settings.from_env().with_overrides(**overrides)
 
+    print("settings api key:", settings.api_key)
+
     logging.basicConfig(level=settings.log_level, format="%(asctime)s %(levelname)-7s %(name)s: %(message)s")
 
     if args.check:
